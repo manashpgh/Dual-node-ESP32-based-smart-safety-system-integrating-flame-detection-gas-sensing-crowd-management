@@ -1,0 +1,96 @@
+//FLAME CODE
+#include <Wire.h>
+#include <U8g2lib.h>
+
+// SH1106 OLED
+U8G2_SH1106_128X64_NONAME_F_HW_I2C oled(U8G2_R0, U8X8_PIN_NONE);
+
+// Sensor pins
+#define MQ135_PIN 34      // Analog input for gas sensor
+#define FLAME_PIN 26      // Digital input for flame sensor
+
+// Pump pin (MOSFET gate)
+#define PUMP_PIN 32       // Controls MOSFET gate
+
+void setup() {
+  Serial.begin(115200);
+  delay(200);
+
+  // I2C + OLED
+  Wire.begin(21, 22);     // SDA = 21, SCL = 22
+  delay(100);
+  oled.begin();
+
+  // Sensors
+  pinMode(FLAME_PIN, INPUT);
+
+  // Pump output
+  pinMode(PUMP_PIN, OUTPUT);
+  digitalWrite(PUMP_PIN, LOW);   // Pump OFF initially
+
+  // Startup screen
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tr);
+  oled.drawStr(0, 15, "System Ready");
+  oled.drawStr(0, 30, "MQ135 + Flame + Pump");
+  oled.sendBuffer();
+
+  delay(1000);
+}
+
+void loop() {
+
+  // ---------- MQ135 Read ----------
+  int mqRaw = analogRead(MQ135_PIN);
+  float mqVoltage = mqRaw * (3.3 / 4095.0);   // 0–3.3V ADC
+
+  // ---------- Flame Read ----------
+  int flame = digitalRead(FLAME_PIN);
+  bool flameDetected = (flame == LOW);  // Most modules: LOW = fire detected
+
+  // ---------- Pump Control ----------
+  if (flameDetected) {
+    digitalWrite(PUMP_PIN, HIGH);   // Turn pump ON
+  } else {
+    digitalWrite(PUMP_PIN, LOW);    // Turn pump OFF
+  }
+
+  bool pumpOn = flameDetected;      // same logic
+
+  // ---------- Serial Debug ----------
+  Serial.print("MQ135 Raw: ");
+  Serial.print(mqRaw);
+  Serial.print(" | Voltage: ");
+  Serial.print(mqVoltage);
+  Serial.print(" V | Flame: ");
+  Serial.print(flameDetected ? "YES" : "NO");
+  Serial.print(" | Pump: ");
+  Serial.println(pumpOn ? "ON" : "OFF");
+
+  // ---------- Show on OLED ----------
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tr);
+
+  // MQ135 line
+  char mqStr[24];
+  sprintf(mqStr, "MQ135: %d", mqRaw);
+  oled.drawStr(0, 12, mqStr);
+
+  // Flame status
+  if (flameDetected) {
+    oled.drawStr(0, 28, "Flame: DETECTED!");
+  } else {
+    oled.drawStr(0, 28, "Flame: Safe");
+  }
+
+  // Pump status
+  if (pumpOn) {
+    oled.drawStr(0, 44, "Pump: ON");
+  } else {
+    oled.drawStr(0, 44, "Pump: OFF");
+  }
+
+  oled.sendBuffer();
+
+  delay(300);
+}
