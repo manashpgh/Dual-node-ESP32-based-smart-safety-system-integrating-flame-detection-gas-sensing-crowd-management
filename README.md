@@ -98,15 +98,18 @@ Calibration data ensures the system operates **robustly under real-world conditi
 
 ESP32-Smart-Safety-System-Flame-Detection-Crowd-Management/
 │
-├── README.md
-│
 ├── architecture/
+
 │   ├── crowd management circuit diagram.pdf
+
 │   └── edge_fog_cloud_overview.pdf
 │   
-├── firmware/ 
+├── firmware/
+
 │   ├── crowd_management_node/
+
 │   │   ├── crowd management code.txt
+
 |   |   └── crowdmqtt.txt
 |   |
 │   └── flame_detection_node/    
