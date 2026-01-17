@@ -175,17 +175,15 @@ ESP32-Smart-Safety-System-Flame-Detection-Crowd-Management/
 
 ---
 
-## 📜 License
+## 👤 Authors
+**Manash Pratim Ghosh**
 
-This project is licensed under the **MIT License**, allowing reuse with attribution.
+GitHub: *(https://github.com/manashpgh)*
 
 ---
 
-## 👤 Author
-
-**Manash Pratim Ghosh**  
-M.Tech Mechatronics Engineering  
-Embedded Systems | Control | IoT | Safety Automation
+## 📄 License
+This project is licensed under the MIT License – see the LICENSE file for details.
 
 
 
