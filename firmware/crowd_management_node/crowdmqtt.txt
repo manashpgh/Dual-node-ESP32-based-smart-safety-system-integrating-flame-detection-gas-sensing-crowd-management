@@ -1,0 +1,138 @@
+//crowd
+#include <Wire.h>
+#include <U8g2lib.h>
+#include <PubSubClient.h>
+#include <WiFi.h>
+
+// SH1106 OLED
+U8G2_SH1106_128X64_NONAME_F_HW_I2C oled(U8G2_R0, U8X8_PIN_NONE);
+
+// Pin Definitions
+#define MQ135_PIN 34      // Analog input for gas sensor (GPIO 34)
+#define FLAME_PIN 26      // Digital input for flame sensor (GPIO 26)
+#define PUMP_PIN 32       // Controls MOSFET gate for pump (GPIO 32)
+#define WIFI_LED 2        // Built-in LED for WiFi status (GPIO 2)
+
+// WiFi and MQTT Configuration
+const char* ssid = "RPI-ROUTER";
+const char* password = "12345678";
+const char* mqtt_server = "192.168.0.6";  // Your Edge3 Pi's IP
+
+// Objects
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+void setup() {
+  Serial.begin(115200);
+  delay(200);
+
+  // Initialize I2C + OLED
+  Wire.begin(21, 22);     // SDA = 21, SCL = 22
+  delay(100);
+  oled.begin();
+
+  // Initialize pins
+  pinMode(FLAME_PIN, INPUT);
+  pinMode(PUMP_PIN, OUTPUT);
+  pinMode(WIFI_LED, OUTPUT);
+  
+  // Initial states
+  digitalWrite(PUMP_PIN, LOW);   // Pump OFF initially
+  digitalWrite(WIFI_LED, LOW);
+
+  // Startup screen
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tr);
+  oled.drawStr(0, 15, "Flame Safety System");
+  oled.drawStr(0, 30, "Initializing...");
+  oled.sendBuffer();
+
+  // Setup WiFi and MQTT
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+
+  delay(1000);
+}
+
+void setup_wifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  digitalWrite(WIFI_LED, HIGH);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void connectMQTT() {
+  while (!client.connected()) {
+    if (client.connect("ESP32_Flame_Sensor")) {
+      Serial.println("MQTT connected");
+    } else {
+      delay(5000);
+    }
+  }
+}
+
+void loop() {
+  if (!client.connected()) {
+    connectMQTT();
+  }
+  client.loop();
+
+  // ---------- MQ135 Read ----------
+  int mqRaw = analogRead(MQ135_PIN);
+
+  // ---------- Flame Detection Logic ----------
+  int flameReading = digitalRead(FLAME_PIN);
+  bool flameDetected = (flameReading == LOW);  // Most modules: LOW = fire detected
+
+  // ---------- Pump Control ----------
+  if (flameDetected) {
+    digitalWrite(PUMP_PIN, HIGH);   // Turn pump ON
+  } else {
+    digitalWrite(PUMP_PIN, LOW);    // Turn pump OFF
+  }
+
+  // ---------- Publish to MQTT ----------
+  // Publish flame detection status
+  if (flameDetected) {
+    client.publish("flame/status", "DETECTED");
+  } else {
+    client.publish("flame/status", "SAFE");
+  }
+
+  // Publish MQ135 raw value
+  char mqttBuffer[10];
+  sprintf(mqttBuffer, "%d", mqRaw);
+  client.publish("mq135/raw", mqttBuffer);
+
+  // ---------- Show on OLED ----------
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tr);
+
+  // Flame Detection Status (Main focus)
+  if (flameDetected) {
+    oled.setFont(u8g2_font_9x18B_tr);
+    oled.drawStr(0, 20, "FLAME");
+    oled.drawStr(0, 40, "DETECTED!");
+    oled.setFont(u8g2_font_6x10_tr);
+    client.publish("system/alert", "FIRE_ALARM");
+  } else {
+    oled.drawStr(0, 20, "Flame: Safe");
+  }
+
+  // WiFi status
+  if (WiFi.status() == WL_CONNECTED) {
+    oled.drawStr(0, 55, "WiFi: Connected");
+  } else {
+    oled.drawStr(0, 55, "WiFi: Disconnected");
+  }
+
+  oled.sendBuffer();
+
+  delay(300);
+}

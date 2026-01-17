@@ -1,0 +1,139 @@
+//CROWD CODE
+#include <Wire.h>
+#include <U8g2lib.h>
+#include <ESP32Servo.h>
+#include <HX711.h>
+#include <DHT.h>
+
+// -------- OLED (SH1106) --------
+U8G2_SH1106_128X64_NONAME_F_HW_I2C oled(U8G2_R0, U8X8_PIN_NONE);
+
+// -------- ESP32 Servo Objects --------
+Servo servoDoor;
+Servo servoPusher;
+
+// -------- PIN Definitions --------
+#define IR_PIN 5
+#define HX711_DOUT 18
+#define HX711_SCK 19
+#define DHT_PIN 4
+#define DHTTYPE DHT11
+
+// Servo pins
+#define SERVO_DOOR_PIN 14    // GPIO 14 - Activates on IR detection
+#define SERVO_PUSHER_PIN 27  // GPIO 27 - Activates on weight threshold
+
+HX711 scale;
+DHT dht(DHT_PIN, DHTTYPE);
+
+// Thresholds
+#define LOAD_THRESHOLD 50.0
+#define WEIGHT_MIN 5.0
+
+// Servo state tracking
+bool pusherActive = false;
+
+// OLED helper
+void showOLED(String a, String b="", String c="") {
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tr);
+  oled.drawStr(0, 12, a.c_str());
+  if (b.length()) oled.drawStr(0, 26, b.c_str());
+  if (c.length()) oled.drawStr(0, 40, c.c_str());
+  oled.sendBuffer();
+}
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(21, 22);
+  Wire.setClock(100000);
+  delay(200);
+  
+  oled.begin();
+  showOLED("OLED OK", "Starting Servos...");
+  delay(300);
+  
+  // Initialize ESP32 Servo Library
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+  
+  servoDoor.setPeriodHertz(50);      // Standard 50Hz servo
+  servoPusher.setPeriodHertz(50);
+  
+  servoDoor.attach(SERVO_DOOR_PIN, 500, 2400);
+  servoPusher.attach(SERVO_PUSHER_PIN, 500, 2400);
+  
+  // Initialize HX711
+  scale.begin(HX711_DOUT, HX711_SCK);
+  scale.set_offset(-389786);
+  scale.set_scale(1878.530029);
+  scale.tare();
+  
+  // Initialize DHT
+  dht.begin();
+  
+  // Initialize IR sensor
+  pinMode(IR_PIN, INPUT);
+  
+  // Set servos to initial position (0 degrees)
+  servoDoor.write(0);
+  servoPusher.write(0);
+  
+  showOLED("System Ready", "Monitoring...");
+  Serial.println("System Ready.");
+}
+
+void loop() {
+  // -------- IR SENSOR --------
+  bool ir = (digitalRead(IR_PIN) == LOW);
+  if (ir) {
+    Serial.println("IR detected - Activating Door Servo (GPIO 14)");
+    showOLED("IR DETECTED!", "Door Servo ON");
+    
+    servoDoor.write(90);              // GPIO 14 servo activates
+    delay(2000);                      // Keep servo active for 2 seconds
+  } else {
+    servoDoor.write(0);               // Return to initial position
+    delay(500);
+  }
+  
+  // -------- LOAD CELL --------
+  float weight = scale.get_units(5);
+  
+  // Check if weight exceeds threshold
+  if (weight > LOAD_THRESHOLD && !pusherActive) {
+    Serial.println("Weight threshold exceeded - Activating Pusher Servo (GPIO 27)");
+    showOLED("OVER CROWDED!", String("W = ") + weight + " g", "Pusher Servo ON");
+    
+    servoPusher.write(90);            // GPIO 27 servo activates
+    pusherActive = true;              // Mark as active
+    delay(2000);
+  }
+  
+  // Check if weight is removed or below 5g - return servo to home
+  if (weight < WEIGHT_MIN && pusherActive) {
+    Serial.println("Weight removed - Returning Pusher Servo to Home Position");
+    showOLED("Weight Removed", "Pusher Servo OFF");
+    
+    servoPusher.write(0);             // Return to home position (0 degrees)
+    pusherActive = false;             // Mark as inactive
+    delay(1000);
+  }
+  
+  // -------- DHT SENSOR --------
+  float temp = dht.readTemperature();
+  float hum = dht.readHumidity();
+  
+  // -------- LIVE OLED DISPLAY --------
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tr);
+  oled.drawStr(0, 12, ir ? "IR: DETECTED" : "IR: CLEAR");
+  oled.drawStr(0, 26, (String("Load: ") + weight + " g").c_str());
+  oled.drawStr(0, 40, (String("Temp: ") + temp + " C").c_str());
+  oled.drawStr(0, 54, (String("Hum: ") + hum + " %").c_str());
+  oled.sendBuffer();
+  
+  delay(250);
+}
