@@ -96,6 +96,7 @@ Calibration data ensures the system operates **robustly under real-world conditi
 
 ## 📂 Repository Structure
 
+```
 ESP32-Smart-Safety-System-Flame-Detection-Crowd-Management/
 │
 ├── architecture/
@@ -137,9 +138,7 @@ ESP32-Smart-Safety-System-Flame-Detection-Crowd-Management/
         ├── flame_detection_simulation.jfif
         ├── flame_detection_wiring.jfif
         └── flame_detection.jpg
-
-
-
+```
 
 ---
 
