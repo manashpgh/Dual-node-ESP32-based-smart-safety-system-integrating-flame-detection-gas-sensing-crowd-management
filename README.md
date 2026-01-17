@@ -97,9 +97,13 @@ Calibration data ensures the system operates **robustly under real-world conditi
 ## 📂 Repository Structure
 
 ├── flame_detection_node/
+
 │ ├── firmware
+
 │ ├── hardware
+
 │ ├── calibration
+
 │ └── documentation
 │
 ├── crowd_management_node/
