@@ -96,39 +96,49 @@ Calibration data ensures the system operates **robustly under real-world conditi
 
 ## 📂 Repository Structure
 
-├── flame_detection_node/
-
-│ ├── firmware
-
-│ ├── hardware
-
-│ ├── calibration
-
-│ └── documentation
+ESP32-Smart-Safety-System-Flame-Detection-Crowd-Management/
 │
-├── crowd_management_node/
-│ ├── firmware
-│ ├── hardware
-│ ├── calibration
-│ └── documentation
+├── README.md
 │
 ├── architecture/
-│ ├── edge_fog_cloud_diagram
-│ ├── flame_node_block_diagram
-│ └── crowd_node_block_diagram
+│   ├── crowd management circuit diagram.pdf
+│   └── edge_fog_cloud_overview.pdf
+│   
+├── firmware/ 
+│   ├── crowd_management_node/
+│   │   ├── crowd management code.txt
+|   |   └── crowdmqtt.txt
+|   |
+│   └── flame_detection_node/    
+│       ├── flame detection code.txt
+│       └── flamemqtt.txt
+│
+├── hardware/
+│   ├── crowd_management_node/
+│   │   ├── crowd management simulation.jfif
+│   │   └── crowd management wiring.jfif
+│   │
+│   └── flame_detection_node/
+│       ├── flame detection simulation.jfif
+│       └── flame detection wiring.jfif
 │
 ├── iot_dashboard/
-│ └── thingsboard_dashboard
+│   ├── crowd thingboard dashboard.jpeg
+│   └── flame thingsboard dashboard.jpeg
 │
-├── media/
-│ ├── demo_videos
-│ └── system_images
-│
-└── docs/
-├── system_overview
-├── decision_logic
-└── calibration_methodology
-
+└── media/
+    ├── crowd_management/
+    |   ├── crowd management integration.mp4
+    │   ├── crowd management simulation.jfif
+    |   ├── crowd management wiring.jfif
+    |   └── crowd management.jfif
+    │
+    └── flame_detection/
+        ├── flame breadboard integration.mp4
+        ├── flame detection 2.jfif
+        ├── flame detection simulation.jfif
+        ├── flame detection wiring.jfif   
+        └── flame detection.jfif
 
 ---
 
